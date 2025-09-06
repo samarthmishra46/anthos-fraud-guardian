@@ -13,6 +13,7 @@ target/
 .vscode
 settings.json
 pyvenv.cfg
+src/frauddetection/run-local.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
