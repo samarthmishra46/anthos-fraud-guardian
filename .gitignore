@@ -183,6 +183,25 @@ extras/asm-multicluster/asm-cluster-2/*
 env
 multicluster-ingress-https.yaml
 
+# Ignore any file containing secrets, API keys, passwords, or JWTs in the filename (any directory)
+*secret*
+*api-key*
+*apikey*
+*password*
+*jwt*
+*JWT*
+*PRIVATE*
+*PRIVATE_KEY*
+*SECRET*
+*Gemini*
+*gemini*
+*AGENT_PROJECT_ID*
+
+# Ignore YAML/JSON files that may contain secrets
+*secret*.yaml
+*secret*.yml
+*secret*.json
+
 # Local .terraform directories
 **/.terraform/*
 
