@@ -1,0 +1,182 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frauddetection
+  labels:
+    application: bank-of-anthos
+    environment: development
+    team: ledger
+    tier: backend
+spec:
+  selector:
+    matchLabels:
+      app: frauddetection
+      application: bank-of-anthos
+      environment: development
+      team: ledger
+      tier: backend
+  template:
+    metadata:
+      annotations:
+        proxy.istio.io/config: '{"proxyStatsMatcher":{"inclusionRegexps":[".*circuit_breakers.*",".*upstream_rq_retry.*",".*upstream_rq_pending.*",".*_cx_.*"],"exclusionRegexps":[".*osconfig_api.*"]}}'
+      labels:
+        app: frauddetection
+        application: bank-of-anthos
+        environment: development
+        team: ledger
+        tier: backend
+    spec:
+      serviceAccountName: bank-of-anthos
+      terminationGracePeriodSeconds: 5
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: frauddetection
+        image: gcr.io/bank-of-anthos-ci/frauddetection:v0.6.4@sha256:c7b6b0df1e53b77f42b9e3aaf5a04f84c6b5a4c48f2b1f4f2e83a8b0e6f4e5b9
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: publickey
+          mountPath: "/tmp/.ssh"
+          readOnly: true
+        ports:
+        - name: http-server
+          containerPort: 8080
+        env:
+        - name: VERSION
+          value: "v0.6.4"
+        - name: PORT
+          value: "8080"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: FRAUD_THRESHOLD
+          value: "0.7"
+        - name: AGENT_PROJECT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: environment-config
+              key: PROJECT_ID
+              optional: true
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gemini-api-secret
+              key: api-key
+              optional: true
+        - name: LOCAL_ROUTING_NUM
+          valueFrom:
+            configMapKeyRef:
+              name: environment-config
+              key: LOCAL_ROUTING_NUM
+        - name: PUB_KEY_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: environment-config
+              key: PUB_KEY_PATH
+        - name: TRANSACTIONS_API_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: service-api-config
+              key: TRANSACTIONS_API_ADDR
+        - name: HISTORY_API_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: service-api-config
+              key: HISTORY_API_ADDR
+        - name: BALANCES_API_ADDR
+          valueFrom:
+            configMapKeyRef:
+              name: service-api-config
+              key: BALANCES_API_ADDR
+        envFrom:
+        - configMapRef:
+            name: environment-config
+        - configMapRef:
+            name: service-api-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /healthy
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - all
+          privileged: false
+          readOnlyRootFilesystem: true
+      volumes:
+      - name: publickey
+        secret:
+          secretName: jwt-key
+          items:
+          - key: jwtRS256.key.pub
+            path: publickey
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frauddetection
+  labels:
+    application: bank-of-anthos
+    environment: development
+    team: ledger
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: frauddetection
+    application: bank-of-anthos
+    environment: development
+    team: ledger
+    tier: backend
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gemini-api-secret
+  labels:
+    application: bank-of-anthos
+    environment: development
+    team: ledger
+type: Opaque
+data:
+  # Base64 encoded dummy API key - replace with actual key
+  # echo -n "your-actual-gemini-api-key-here" | base64
+  api-key: ZHVtbXktYXBpLWtleS1mb3ItdGVzdGluZw==

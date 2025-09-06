@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank of Anthos - Fraud Detection Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 1rem;
+        }
+        
+        .alert {
+            padding: 12px;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .fraud-examples {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+        
+        .fraud-examples h3 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        
+        .fraud-examples ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .fraud-examples li {
+            padding: 0.25rem 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-healthy {
+            background-color: #28a745;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e1e1e1;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 Bank of Anthos</h1>
+            <p>Fraud Detection Demo</p>
+            <p><span class="status-indicator status-healthy"></span>Fraud Detection Service: Active</p>
+        </div>
+        
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form action="{{ url_for('submit_transaction') }}" method="POST">
+            <div class="form-group">
+                <label for="to_account">Recipient Account Number:</label>
+                <input type="text" id="to_account" name="to_account" placeholder="e.g., 9876543210" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="amount">Amount ($):</label>
+                <input type="number" id="amount" name="amount" step="0.01" min="0.01" placeholder="e.g., 100.00" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <input type="text" id="description" name="description" placeholder="e.g., Coffee purchase" required>
+            </div>
+            
+            <button type="submit" class="btn">💳 Submit Transaction</button>
+        </form>
+        
+        <a href="{{ url_for('fraud_stats') }}" class="btn btn-secondary">📊 View Fraud Statistics</a>
+        
+        <div class="fraud-examples">
+            <h3>💡 Try these to test fraud detection:</h3>
+            <ul>
+                <li>• <strong>Normal:</strong> $50.00 - Coffee purchase</li>
+                <li>• <strong>High amount:</strong> $15000.00 - Large transfer</li>
+                <li>• <strong>Suspicious:</strong> $1000.00 - Cash withdrawal</li>
+                <li>• <strong>Small test:</strong> $1.00 - Card verification</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>Demo User Account: 1234567890</p>
+            <p>Fraud Threshold: 50% confidence</p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-clear flash messages after 10 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.opacity = '0.5';
+            });
+        }, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-data-config
+  labels:
+    application: bank-of-anthos
+    environment: development
+data:
+  DEMO_LOGIN_USERNAME: "testuser"
+  DEMO_LOGIN_PASSWORD: "bankofanthos"
+  USE_DEMO_DATA: "True"

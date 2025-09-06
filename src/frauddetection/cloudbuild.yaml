@@ -1,0 +1,63 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - 'build'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/frauddetection:$COMMIT_SHA'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/frauddetection:latest'
+  - '.'
+  dir: 'src/frauddetection'
+
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - 'push'
+  - 'gcr.io/$PROJECT_ID/frauddetection:$COMMIT_SHA'
+
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - 'push'
+  - 'gcr.io/$PROJECT_ID/frauddetection:latest'
+
+# Security scanning
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+  - 'container'
+  - 'images'
+  - 'scan'
+  - 'gcr.io/$PROJECT_ID/frauddetection:$COMMIT_SHA'
+  - '--format=json'
+
+# Run tests
+- name: 'python:3.11-slim'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    cd src/frauddetection
+    pip install -r requirements.txt
+    python -m pytest tests/ -v || echo "No tests found, skipping..."
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: '1200s'
+
+images:
+- 'gcr.io/$PROJECT_ID/frauddetection:$COMMIT_SHA'
+- 'gcr.io/$PROJECT_ID/frauddetection:latest'

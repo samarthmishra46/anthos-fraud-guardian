@@ -1,0 +1,32 @@
+[
+  {
+    "httpRequest": {
+      "path": "/login",
+      "method": "POST"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2N0IjoiMTIzNDU2Nzg5MCIsImV4cCI6OTk5OTk5OTk5OSwiaWF0IjoxNjAwMDAwMDAwfQ.mock-signature"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "path": "/users",
+      "method": "POST"
+    },
+    "httpResponse": {
+      "statusCode": 201,
+      "headers": {
+        "Content-Type": ["application/json"]
+      },
+      "body": {
+        "message": "User created successfully"
+      }
+    }
+  }
+]

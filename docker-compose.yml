@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Fraud Detection Service
+  frauddetection:
+    build: ./src/frauddetection
+    ports:
+      - "8080:8080"
+    environment:
+      - GEMINI_API_KEY=AIzaSyCixf1Cz8FJSOvtRXyRb262ORZVu8eoFpU
+      - AGENT_PROJECT_ID=gke-boa-471214
+      - FRAUD_THRESHOLD=0.5
+      - LOG_LEVEL=DEBUG
+      - LOCAL_TESTING=true
+      - LOCAL_ROUTING_NUM=883745000
+      - PUB_KEY_PATH=/tmp/.ssh/publickey
+    volumes:
+      - ./src/frauddetection/mock-jwt-key:/tmp/.ssh:ro
+    networks:
+      - bank-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service
+  frontend:
+    build: ./src/frontend
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+      - SCHEME=http
+      - BANK_NAME=Bank of Anthos (Demo)
+      - ENV_PLATFORM=local
+      - VERSION=v0.6.4
+      - DEFAULT_USERNAME=testuser
+      - DEFAULT_PASSWORD=password
+      - LOCAL_ROUTING_NUM=883745000
+      - PUB_KEY_PATH=/tmp/.ssh/publickey
+      # Service API Configuration
+      - FRAUDDETECTION_API_ADDR=frauddetection:8080
+      - TRANSACTIONS_API_ADDR=ledgerwriter:8080
+      - USERSERVICE_API_ADDR=userservice:8080
+      - BALANCES_API_ADDR=balancereader:8080
+      - HISTORY_API_ADDR=transactionhistory:8080
+      - CONTACTS_API_ADDR=contacts:8080
+    volumes:
+      - ./src/frontend/mock-jwt-key:/tmp/.ssh:ro
+    depends_on:
+      - frauddetection
+    networks:
+      - bank-network
+
+  # Mock User Service (for authentication)
+  mockuserservice:
+    image: mockserver/mockserver:5.15.0
+    ports:
+      - "8082:1080"
+    environment:
+      - MOCKSERVER_INITIALIZATION_JSON_PATH=/config/userservice-mock.json
+    volumes:
+      - ./mock-services:/config
+    networks:
+      - bank-network
+
+  # Mock Services for other dependencies
+  mockservices:
+    image: nginx:alpine
+    ports:
+      - "8083:80"
+      - "8084:80"
+      - "8085:80"
+      - "8086:80"
+    volumes:
+      - ./mock-services/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - bank-network
+
+networks:
+  bank-network:
+    driver: bridge
